@@ -1,0 +1,92 @@
+import React from 'react';
+import { createStackNavigator } from '@react-navigation/stack';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useAuthStore } from '../store/authStore';
+import { ActivityIndicator, View } from 'react-native';
+
+// Auth Screens
+import LoginScreen from '../screens/auth/LoginScreen';
+import RegisterScreen from '../screens/auth/RegisterScreen';
+
+// Main Screens
+import DashboardScreen from '../screens/dashboard/DashboardScreen';
+import ReceiptsScreen from '../screens/receipts/ReceiptsScreen';
+import ScanScreen from '../screens/scan/ScanScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
+
+const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
+
+// Auth Navigator
+function AuthNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Main Tab Navigator
+function MainNavigator() {
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: true,
+        tabBarStyle: {
+          paddingBottom: 5,
+          paddingTop: 5,
+          height: 60,
+        },
+      }}
+    >
+      <Tab.Screen
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarLabel: 'Dashboard',
+          headerTitle: 'SmartReceipt',
+        }}
+      />
+      <Tab.Screen
+        name="Receipts"
+        component={ReceiptsScreen}
+        options={{
+          tabBarLabel: 'Receipts',
+          headerTitle: 'My Receipts',
+        }}
+      />
+      <Tab.Screen
+        name="Scan"
+        component={ScanScreen}
+        options={{
+          tabBarLabel: 'Scan',
+          headerTitle: 'Scan Receipt',
+        }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{
+          tabBarLabel: 'Profile',
+          headerTitle: 'Profile',
+        }}
+      />
+    </Tab.Navigator>
+  );
+}
+
+// Root App Navigator
+export default function AppNavigator() {
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return isAuthenticated ? <MainNavigator /> : <AuthNavigator />;
+}

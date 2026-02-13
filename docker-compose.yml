@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7.0
+    container_name: smartreceipt-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: smartreceipt_dev_password
+      MONGO_INITDB_DATABASE: smartreceipt
+    volumes:
+      - mongodb_data:/data/db
+      - ./server/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - smartreceipt-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: smartreceipt-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - smartreceipt-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: smartreceipt-server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:smartreceipt_dev_password@mongodb:27017/smartreceipt?authSource=admin
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: dev_jwt_secret_change_in_production
+      JWT_REFRESH_SECRET: dev_jwt_refresh_secret_change_in_production
+      JWT_EXPIRE: 15m
+      JWT_REFRESH_EXPIRE: 7d
+    volumes:
+      - ./server:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - smartreceipt-network
+    command: npm run dev
+
+volumes:
+  mongodb_data:
+  redis_data:
+
+networks:
+  smartreceipt-network:
+    driver: bridge

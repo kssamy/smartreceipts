@@ -1,0 +1,22 @@
+{
+  "name": "smartreceipt",
+  "version": "1.0.0",
+  "description": "Receipt Scanner, Price Tracker & Smart Savings App",
+  "private": true,
+  "scripts": {
+    "install:all": "cd server && npm install && cd ../mobile && npm install",
+    "dev": "docker-compose up",
+    "dev:server": "cd server && npm run dev",
+    "dev:mobile": "cd mobile && npm start",
+    "build:server": "cd server && npm run build",
+    "test": "cd server && npm test"
+  },
+  "keywords": [
+    "receipt-scanner",
+    "price-tracker",
+    "savings",
+    "ocr"
+  ],
+  "author": "SmartReceipt Team",
+  "license": "MIT"
+}

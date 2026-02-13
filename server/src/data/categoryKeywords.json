@@ -1,0 +1,59 @@
+{
+  "Groceries": [
+    "milk", "bread", "cheese", "butter", "eggs", "yogurt", "cream",
+    "chicken", "beef", "pork", "fish", "turkey", "meat", "bacon", "sausage",
+    "apple", "banana", "orange", "grape", "berry", "fruit", "vegetable",
+    "lettuce", "tomato", "potato", "onion", "carrot", "broccoli", "spinach",
+    "rice", "pasta", "cereal", "flour", "sugar", "salt", "pepper", "oil",
+    "coffee", "tea", "juice", "soda", "water", "beverage",
+    "snack", "chip", "cookie", "candy", "chocolate", "cracker",
+    "frozen", "deli", "bakery", "produce", "organic", "gluten free"
+  ],
+  "Dining": [
+    "restaurant", "cafe", "diner", "bistro", "grill", "pizza", "burger",
+    "fast food", "takeout", "delivery", "doordash", "uber eats", "grubhub",
+    "starbucks", "mcdonald", "subway", "chipotle", "panera",
+    "lunch", "dinner", "breakfast", "brunch", "meal"
+  ],
+  "Electronics": [
+    "phone", "laptop", "computer", "tablet", "ipad", "macbook", "pc",
+    "monitor", "keyboard", "mouse", "headphone", "speaker", "earbuds",
+    "charger", "cable", "adapter", "battery", "camera", "tv", "television",
+    "playstation", "xbox", "nintendo", "gaming", "console",
+    "best buy", "apple store", "amazon electronics"
+  ],
+  "Clothing": [
+    "shirt", "pants", "dress", "skirt", "jacket", "coat", "sweater",
+    "shoes", "boots", "sneakers", "sandals", "socks", "underwear",
+    "jeans", "shorts", "blouse", "hoodie", "tie", "belt", "hat",
+    "nike", "adidas", "zara", "h&m", "gap", "old navy", "target clothes"
+  ],
+  "Health": [
+    "pharmacy", "drugstore", "medicine", "prescription", "vitamin",
+    "supplement", "bandage", "first aid", "thermometer", "pain relief",
+    "aspirin", "ibuprofen", "antibiotic", "cream", "ointment",
+    "cvs", "walgreens", "rite aid", "pharmacy", "medical", "health"
+  ],
+  "Home": [
+    "furniture", "table", "chair", "couch", "bed", "mattress", "lamp",
+    "decoration", "curtain", "rug", "pillow", "blanket", "towel",
+    "cleaning", "detergent", "soap", "bleach", "vacuum", "mop", "broom",
+    "toilet paper", "paper towel", "tissue", "trash bag", "laundry",
+    "ikea", "home depot", "lowes", "bed bath", "target home"
+  ],
+  "Transportation": [
+    "gas", "fuel", "gasoline", "diesel", "shell", "chevron", "exxon",
+    "uber", "lyft", "taxi", "parking", "toll", "subway", "bus", "train",
+    "car wash", "oil change", "auto", "automotive", "repair"
+  ],
+  "Entertainment": [
+    "movie", "cinema", "theater", "concert", "ticket", "event",
+    "amusement", "theme park", "zoo", "museum", "sport", "game",
+    "bowling", "golf", "gym", "fitness", "recreation"
+  ],
+  "Subscriptions": [
+    "netflix", "spotify", "hulu", "disney", "amazon prime", "youtube premium",
+    "apple music", "subscription", "membership", "monthly fee", "annual fee",
+    "cloud storage", "dropbox", "icloud", "google one"
+  ]
+}
