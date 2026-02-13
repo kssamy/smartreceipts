@@ -1,6 +1,6 @@
 // API configuration
-// For physical device, use your computer's IP address
-export const API_URL = process.env.API_URL || 'http://172.20.10.5:3000/api/v1';
+// Oracle Cloud Backend
+export const API_URL = process.env.API_URL || 'http://152.70.114.100:3000/api/v1';
 
 // Debug logging
 console.log('🔧 API Configuration:', {
