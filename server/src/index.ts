@@ -26,11 +26,14 @@ const startServer = async () => {
       logger.warn('Redis connection failed - continuing without Redis:', redisError);
     }
 
-    // Start Express server
-    app.listen(PORT, () => {
+    // Start Express server - bind to 0.0.0.0 to accept external connections
+    app.listen(PORT, '0.0.0.0', () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`API endpoints available at http://localhost:${PORT}/api/v1`);
+      logger.info(`API endpoints available at http://0.0.0.0:${PORT}/api/v1`);
+      if (process.env.NODE_ENV === 'production' && process.env.API_URL) {
+        logger.info(`Public URL: ${process.env.API_URL}`);
+      }
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
