@@ -21,22 +21,8 @@ echo -e "${GREEN}📦 Installing Node.js...${NC}"
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-# Install MongoDB
-echo -e "${GREEN}📦 Installing MongoDB...${NC}"
-curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
-   sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg \
-   --dearmor
-
-echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
-   sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
-
-sudo apt-get update
-sudo apt-get install -y mongodb-org
-
-# Start MongoDB
-echo -e "${GREEN}🔧 Starting MongoDB...${NC}"
-sudo systemctl start mongod
-sudo systemctl enable mongod
+# Skip MongoDB installation - using MongoDB Atlas cloud database
+echo -e "${GREEN}☁️  Using MongoDB Atlas (cloud database)...${NC}"
 
 # Install Git
 echo -e "${GREEN}📦 Installing Git...${NC}"
@@ -70,10 +56,10 @@ if [ ! -f .env ]; then
 NODE_ENV=production
 PORT=3000
 
-# MongoDB (local)
-MONGODB_URI=mongodb://localhost:27017/smartreceipt
+# MongoDB Atlas (cloud database)
+MONGODB_URI=mongodb+srv://smartreceipt:GvbMjJgdbRwNXomc@cluster0.ltveur1.mongodb.net/smartreceipt?retryWrites=true&w=majority
 
-# JWT Secrets (CHANGE THESE IN PRODUCTION!)
+# JWT Secrets (auto-generated)
 JWT_SECRET=$(openssl rand -base64 32)
 JWT_REFRESH_SECRET=$(openssl rand -base64 32)
 
@@ -110,16 +96,19 @@ echo ""
 echo -e "${GREEN}✅ Setup complete!${NC}"
 echo ""
 echo "Next steps:"
-echo "1. Edit the .env file and update YOUR_PUBLIC_IP:"
+echo "1. Edit the .env file and update YOUR_PUBLIC_IP with your Oracle Cloud public IP:"
 echo "   nano ~/smartreceipts/server/.env"
 echo ""
 echo "2. Restart the application:"
 echo "   pm2 restart smartreceipt-api"
 echo ""
-echo "3. Check the logs:"
+echo "3. Check the logs (should see 'MongoDB connection established'):"
 echo "   pm2 logs smartreceipt-api"
 echo ""
 echo "4. Test the API:"
 echo "   curl http://localhost:3000/api/v1/health"
 echo ""
-echo -e "${YELLOW}📝 Don't forget to update the Oracle Cloud Security List to allow port 3000!${NC}"
+echo -e "${YELLOW}📝 Important reminders:${NC}"
+echo "   - Update Oracle Cloud Security List to allow port 3000"
+echo "   - MongoDB Atlas Network Access should allow connections from 0.0.0.0/0"
+echo "   - Your API will be available at: http://YOUR_PUBLIC_IP:3000"
