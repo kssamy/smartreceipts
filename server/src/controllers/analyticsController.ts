@@ -356,7 +356,7 @@ export const getDashboardOverview = async (req: AuthRequest, res: Response): Pro
       { $limit: 5 },
     ];
 
-    const topCategories = await Receipt.aggregate(categoryPipeline);
+    const topCategories = await Receipt.aggregate(categoryPipeline as any);
 
     res.status(200).json({
       success: true,
