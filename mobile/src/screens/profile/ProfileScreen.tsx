@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,11 +6,48 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  TextInput,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
+import { authAPI } from '../../services/api';
 
-export default function ProfileScreen() {
-  const { user, clearAuth } = useAuthStore();
+export default function ProfileScreen({ navigation }: any) {
+  const { user, clearAuth, setAuth, accessToken, refreshToken } = useAuthStore();
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editName, setEditName] = useState(user?.name || '');
+  const [saving, setSaving] = useState(false);
+
+  const handleEditProfile = () => {
+    setEditName(user?.name || '');
+    setEditModalVisible(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!editName.trim()) {
+      Alert.alert('Error', 'Name cannot be empty');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await authAPI.updateProfile({ name: editName.trim() });
+
+      // Update local user state
+      if (user && accessToken && refreshToken) {
+        await setAuth({ ...user, name: editName.trim() }, accessToken, refreshToken);
+      }
+
+      Alert.alert('Success', 'Profile updated successfully');
+      setEditModalVisible(false);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      Alert.alert('Error', 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogout = () => {
     Alert.alert('Logout', 'Are you sure you want to logout?', [
@@ -41,18 +78,16 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Account</Text>
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={handleEditProfile}>
             <Text style={styles.menuItemText}>Edit Profile</Text>
             <Text style={styles.menuItemArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Notifications</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Privacy</Text>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Privacy')}
+          >
+            <Text style={styles.menuItemText}>Privacy & Data</Text>
             <Text style={styles.menuItemArrow}>›</Text>
           </TouchableOpacity>
         </View>
@@ -65,12 +100,10 @@ export default function ProfileScreen() {
             <Text style={styles.menuItemArrow}>›</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Help & Support</Text>
-            <Text style={styles.menuItemArrow}>›</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Terms')}
+          >
             <Text style={styles.menuItemText}>Terms of Service</Text>
             <Text style={styles.menuItemArrow}>›</Text>
           </TouchableOpacity>
@@ -82,6 +115,55 @@ export default function ProfileScreen() {
 
         <Text style={styles.version}>Version 1.0.0 (MVP)</Text>
       </View>
+
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={editModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+
+            <Text style={styles.modalLabel}>Name</Text>
+            <TextInput
+              style={styles.modalInput}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Enter your name"
+              autoFocus={true}
+            />
+
+            <Text style={styles.modalLabel}>Email</Text>
+            <Text style={styles.modalEmailText}>{user?.email}</Text>
+            <Text style={styles.modalEmailNote}>Email cannot be changed</Text>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => setEditModalVisible(false)}
+                disabled={saving}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSaveButton]}
+                onPress={handleSaveProfile}
+                disabled={saving}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.modalSaveButtonText}>Save</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -182,5 +264,79 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 8,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  modalInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  modalEmailText: {
+    fontSize: 16,
+    color: '#333',
+    paddingVertical: 8,
+  },
+  modalEmailNote: {
+    fontSize: 12,
+    color: '#999',
+    fontStyle: 'italic',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    marginTop: 24,
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#f5f5f5',
+  },
+  modalCancelButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalSaveButton: {
+    backgroundColor: '#007AFF',
+  },
+  modalSaveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

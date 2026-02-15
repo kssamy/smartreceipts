@@ -13,6 +13,8 @@ import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ReceiptsScreen from '../screens/receipts/ReceiptsScreen';
 import ScanScreen from '../screens/scan/ScanScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import PrivacyScreen from '../screens/profile/PrivacyScreen';
+import TermsScreen from '../screens/profile/TermsScreen';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -23,6 +25,29 @@ function AuthNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login" component={LoginScreen} />
       <Stack.Screen name="Register" component={RegisterScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// Profile Stack Navigator
+function ProfileNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="ProfileMain"
+        component={ProfileScreen}
+        options={{ headerTitle: 'Profile' }}
+      />
+      <Stack.Screen
+        name="Privacy"
+        component={PrivacyScreen}
+        options={{ headerTitle: 'Privacy & Data' }}
+      />
+      <Stack.Screen
+        name="Terms"
+        component={TermsScreen}
+        options={{ headerTitle: 'Terms of Service' }}
+      />
     </Stack.Navigator>
   );
 }
@@ -66,10 +91,11 @@ function MainNavigator() {
       />
       <Tab.Screen
         name="Profile"
-        component={ProfileScreen}
+        component={ProfileNavigator}
         options={{
           tabBarLabel: 'Profile',
           headerTitle: 'Profile',
+          headerShown: false,
         }}
       />
     </Tab.Navigator>
