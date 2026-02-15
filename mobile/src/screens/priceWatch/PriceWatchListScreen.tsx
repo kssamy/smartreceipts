@@ -9,6 +9,11 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { priceWatchAPI } from '../../services/api';
@@ -31,6 +36,13 @@ export default function PriceWatchListScreen({ navigation }: any) {
   const [watches, setWatches] = useState<PriceWatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addingItem, setAddingItem] = useState(false);
+
+  // Form fields
+  const [itemName, setItemName] = useState('');
+  const [price, setPrice] = useState('');
+  const [storeName, setStoreName] = useState('');
 
   useEffect(() => {
     loadPriceWatches();
@@ -74,6 +86,49 @@ export default function PriceWatchListScreen({ navigation }: any) {
         },
       ]
     );
+  };
+
+  const handleAddItem = async () => {
+    if (!itemName.trim() || !price.trim() || !storeName.trim()) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    const priceValue = parseFloat(price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      Alert.alert('Error', 'Please enter a valid price');
+      return;
+    }
+
+    setAddingItem(true);
+
+    try {
+      await priceWatchAPI.create({
+        itemName: itemName.trim(),
+        originalPrice: priceValue,
+        storeName: storeName.trim(),
+        purchaseDate: new Date().toISOString(),
+      });
+
+      // Clear form
+      setItemName('');
+      setPrice('');
+      setStoreName('');
+      setShowAddModal(false);
+
+      // Reload watches
+      await loadPriceWatches();
+
+      Alert.alert('Success', 'Item added to price tracker!');
+    } catch (error: any) {
+      console.error('Failed to add price watch:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      console.error('Full error:', JSON.stringify(error, null, 2));
+      Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to add item to tracker');
+    } finally {
+      setAddingItem(false);
+    }
   };
 
   const renderRightActions = (
@@ -208,12 +263,91 @@ export default function PriceWatchListScreen({ navigation }: any) {
               No items being tracked yet
             </Text>
             <Text style={styles.emptySubtext}>
-              Scan a receipt to start tracking prices automatically!
+              Tap the + button below to add an item to track!
             </Text>
           </View>
         }
         contentContainerStyle={watches.length === 0 && styles.emptyContainer}
       />
+
+      {/* Floating Add Button */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => setShowAddModal(true)}
+      >
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
+
+      {/* Add Item Modal */}
+      <Modal
+        visible={showAddModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalContainer}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Item to Track</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Text style={styles.closeButton}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.formContainer}>
+              <Text style={styles.label}>Item Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Organic Milk"
+                value={itemName}
+                onChangeText={setItemName}
+                autoCapitalize="words"
+              />
+
+              <Text style={styles.label}>Price You Paid</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., 4.99"
+                value={price}
+                onChangeText={setPrice}
+                keyboardType="decimal-pad"
+              />
+
+              <Text style={styles.label}>Store Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., Trader Joe's"
+                value={storeName}
+                onChangeText={setStoreName}
+                autoCapitalize="words"
+              />
+
+              <TouchableOpacity
+                style={[styles.submitButton, addingItem && styles.submitButtonDisabled]}
+                onPress={handleAddItem}
+                disabled={addingItem}
+              >
+                {addingItem ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Start Tracking</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowAddModal(false)}
+                disabled={addingItem}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -377,5 +511,94 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  fabText: {
+    fontSize: 32,
+    color: '#fff',
+    fontWeight: '300',
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#333',
+  },
+  closeButton: {
+    fontSize: 28,
+    color: '#999',
+    fontWeight: '300',
+  },
+  formContainer: {
+    padding: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+    backgroundColor: '#fff',
+  },
+  submitButton: {
+    backgroundColor: '#4CAF50',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#a5d6a7',
+  },
+  submitButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cancelButton: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  cancelButtonText: {
+    color: '#666',
+    fontSize: 16,
   },
 });

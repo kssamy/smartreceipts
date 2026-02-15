@@ -11,8 +11,8 @@ echo ""
 # Configuration
 ORACLE_HOST="152.70.114.100"
 ORACLE_USER="ubuntu"  # Change this if different
-SSH_KEY="$HOME/Downloads/GBI-Bioinformatics-Class.pem"  # Update with correct key path
-PROJECT_DIR="/home/ubuntu/smartreceipt"  # Update with actual path on server
+SSH_KEY="$HOME/Documents/oracle-cloud/ssh-key-2026-02-13.key"
+PROJECT_DIR="/home/ubuntu/smartreceipts"
 CONTAINER_NAME="smartreceipt-backend"
 
 # Colors for output
@@ -55,7 +55,7 @@ ssh -i "$SSH_KEY" "$ORACLE_USER@$ORACLE_HOST" << 'ENDSSH'
     set -e
 
     echo "📂 Navigating to project directory..."
-    cd /home/ubuntu/smartreceipt/server || { echo "❌ Project directory not found"; exit 1; }
+    cd /home/ubuntu/smartreceipts/server || { echo "❌ Project directory not found"; exit 1; }
 
     echo "🔄 Pulling latest code from GitHub..."
     git fetch origin

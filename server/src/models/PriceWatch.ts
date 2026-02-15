@@ -17,7 +17,7 @@ export interface IThresholds {
 export interface IPriceWatch extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
-  receiptId: mongoose.Types.ObjectId;
+  receiptId?: mongoose.Types.ObjectId;
   itemName: string;
   normalizedName: string;
   category: string;
@@ -44,7 +44,7 @@ const priceWatchSchema = new Schema<IPriceWatch>(
     receiptId: {
       type: Schema.Types.ObjectId,
       ref: 'Receipt',
-      required: true,
+      required: false,
       index: true,
     },
     itemName: {

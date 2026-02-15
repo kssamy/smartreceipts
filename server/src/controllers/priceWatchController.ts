@@ -9,7 +9,7 @@ import logger from '../utils/logger';
  */
 export async function getPriceWatches(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user._id;
 
     const watches = await PriceWatch.find({
       userId,
@@ -39,7 +39,7 @@ export async function getPriceWatches(req: Request, res: Response): Promise<void
  */
 export async function getPriceHistory(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user._id;
     const { watchId } = req.params;
 
     // Verify the watch belongs to the user
@@ -86,7 +86,7 @@ export async function getPriceHistory(req: Request, res: Response): Promise<void
  */
 export async function createPriceWatch(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user._id;
     const user = (req as any).user;
     const { itemName, normalizedName, category, originalPrice, storeName, purchaseDate } = req.body;
 
@@ -139,7 +139,7 @@ export async function createPriceWatch(req: Request, res: Response): Promise<voi
  */
 export async function updateThresholds(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user._id;
     const { watchId } = req.params;
     const { thresholds } = req.body;
 
@@ -198,7 +198,7 @@ export async function updateThresholds(req: Request, res: Response): Promise<voi
  */
 export async function deletePriceWatch(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user._id;
     const { watchId } = req.params;
 
     // Verify the watch belongs to the user
@@ -238,7 +238,7 @@ export async function deletePriceWatch(req: Request, res: Response): Promise<voi
  */
 export async function getPriceAlerts(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user._id;
 
     const alerts = await PriceAlert.find({
       userId,
@@ -268,7 +268,7 @@ export async function getPriceAlerts(req: Request, res: Response): Promise<void>
  */
 export async function getSavingsSummary(req: Request, res: Response): Promise<void> {
   try {
-    const userId = (req as any).user.id;
+    const userId = (req as any).user._id;
 
     // Get all watches with best prices found
     const watches = await PriceWatch.find({
