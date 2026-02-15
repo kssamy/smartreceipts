@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { receiptAPI } from '../../services/api';
 import { format } from 'date-fns';
@@ -18,7 +19,14 @@ export default function ReceiptsScreen({ navigation }: any) {
 
   useEffect(() => {
     loadReceipts();
-  }, []);
+
+    // Add listener to reload when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadReceipts();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const loadReceipts = async () => {
     try {
@@ -37,8 +45,60 @@ export default function ReceiptsScreen({ navigation }: any) {
     loadReceipts();
   };
 
+  const deleteReceipt = async (receiptId: string) => {
+    Alert.alert(
+      'Delete Receipt',
+      'Are you sure you want to delete this receipt?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await receiptAPI.delete(receiptId);
+              // Remove from local state immediately
+              setReceipts(receipts.filter((r: any) => r._id !== receiptId));
+            } catch (error) {
+              console.error('Failed to delete receipt:', error);
+              Alert.alert('Error', 'Failed to delete receipt');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const viewReceiptDetails = (receipt: any) => {
+    // For now, show an alert with receipt details
+    // TODO: Create a detailed view screen
+    const itemsList = receipt.items.map((item: any) =>
+      `• ${item.name}: $${item.totalPrice.toFixed(2)}`
+    ).join('\n');
+
+    const tipLine = receipt.tip && receipt.tip > 0
+      ? `Tip: $${receipt.tip.toFixed(2)}\n`
+      : '';
+
+    Alert.alert(
+      receipt.storeName,
+      `${format(new Date(receipt.date), 'MMM dd, yyyy')}\n${receipt.storeAddress || ''}\n\n${itemsList}\n\nSubtotal: $${receipt.subtotal?.toFixed(2) || '0.00'}\nTax: $${receipt.tax?.toFixed(2) || '0.00'}\n${tipLine}Total: $${receipt.total.toFixed(2)}`,
+      [
+        { text: 'OK' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => deleteReceipt(receipt._id),
+        },
+      ]
+    );
+  };
+
   const renderReceiptItem = ({ item }: { item: any }) => (
-    <TouchableOpacity style={styles.receiptCard}>
+    <TouchableOpacity
+      style={styles.receiptCard}
+      onPress={() => viewReceiptDetails(item)}
+    >
       <View style={styles.receiptHeader}>
         <Text style={styles.storeName}>{item.storeName}</Text>
         <Text style={styles.receiptTotal}>${item.total.toFixed(2)}</Text>

@@ -6,6 +6,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "API_URL": "http://152.70.114.100:3000/api/v1"
+      },
       "ios": {
         "simulator": false
       }

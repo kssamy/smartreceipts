@@ -20,7 +20,16 @@
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to your camera to scan receipts.",
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload receipt images.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "152.70.114.100": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSIncludesSubdomains": true
+            }
+          }
+        }
       }
     },
     "android": {

@@ -14,7 +14,7 @@ import { format, subDays } from 'date-fns';
 
 const screenWidth = Dimensions.get('window').width;
 
-export default function DashboardScreen() {
+export default function DashboardScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [overview, setOverview] = useState<any>(null);
@@ -23,7 +23,14 @@ export default function DashboardScreen() {
 
   useEffect(() => {
     loadDashboardData();
-  }, []);
+
+    // Add listener to reload when screen comes into focus
+    const unsubscribe = navigation.addListener('focus', () => {
+      loadDashboardData();
+    });
+
+    return unsubscribe;
+  }, [navigation]);
 
   const loadDashboardData = async () => {
     try {
