@@ -92,10 +92,14 @@ async function checkPriceForWatch(watch: any): Promise<{ alertSent: boolean } | 
   try {
     logger.info(`Checking price for: ${watch.itemName} (${watch.normalizedName})`);
 
-    // Check cache first (6 hour TTL)
+    // Check cache first (6 hour TTL) - only if Redis is available
     const redisClient = getRedisClient();
     const cacheKey = `price:${watch.normalizedName}`;
-    const cachedPrice = await redisClient.get(cacheKey);
+    let cachedPrice: string | null = null;
+
+    if (redisClient) {
+      cachedPrice = await redisClient.get(cacheKey);
+    }
 
     let priceData: any[] = [];
 
@@ -113,8 +117,10 @@ async function checkPriceForWatch(watch: any): Promise<{ alertSent: boolean } | 
         return null;
       }
 
-      // Save to cache (6 hours)
-      await redisClient.setEx(cacheKey, 6 * 60 * 60, JSON.stringify(priceData));
+      // Save to cache (6 hours) - only if Redis is available
+      if (redisClient) {
+        await redisClient.setEx(cacheKey, 6 * 60 * 60, JSON.stringify(priceData));
+      }
     }
 
     // Save all prices to price history

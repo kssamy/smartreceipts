@@ -38,9 +38,9 @@ export const connectRedis = async (): Promise<RedisClient> => {
   }
 };
 
-export const getRedisClient = (): RedisClient => {
-  if (!redisClient) {
-    throw new Error('Redis client not initialized. Call connectRedis() first.');
+export const getRedisClient = (): RedisClient | null => {
+  if (!redisClient || !redisClient.isOpen) {
+    return null;
   }
   return redisClient;
 };
