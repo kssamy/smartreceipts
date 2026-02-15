@@ -9,6 +9,7 @@ import rateLimit from 'express-rate-limit';
 import authRoutes from './routes/authRoutes';
 import receiptRoutes from './routes/receiptRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import priceWatchRoutes from './routes/priceWatchRoutes';
 
 // Import logger
 import logger from './utils/logger';
@@ -65,6 +66,7 @@ app.get('/health', (_req: Request, res: Response) => {
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/receipts', receiptRoutes);
 app.use('/api/v1/analytics', analyticsRoutes);
+app.use('/api/v1/price-watch', priceWatchRoutes);
 
 // Root endpoint
 app.get('/', (_req: Request, res: Response) => {
@@ -76,6 +78,7 @@ app.get('/', (_req: Request, res: Response) => {
       auth: '/api/v1/auth',
       receipts: '/api/v1/receipts',
       analytics: '/api/v1/analytics',
+      priceWatch: '/api/v1/price-watch',
     },
   });
 });

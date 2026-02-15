@@ -16,6 +16,22 @@ export interface IUser extends Document {
       budgetAlerts: boolean;
     };
   };
+  priceAlerts: {
+    enabled: boolean;
+    thresholds: {
+      anyDrop: boolean;
+      percent10: boolean;
+      percent20: boolean;
+      percent30: boolean;
+    };
+    quietHours: {
+      enabled: boolean;
+      start: string;
+      end: string;
+    };
+    maxAlertsPerDay: number;
+  };
+  pushNotificationToken?: string;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -70,6 +86,51 @@ const userSchema = new Schema<IUser>(
           default: true,
         },
       },
+    },
+    priceAlerts: {
+      enabled: {
+        type: Boolean,
+        default: true,
+      },
+      thresholds: {
+        anyDrop: {
+          type: Boolean,
+          default: false,
+        },
+        percent10: {
+          type: Boolean,
+          default: true,
+        },
+        percent20: {
+          type: Boolean,
+          default: true,
+        },
+        percent30: {
+          type: Boolean,
+          default: true,
+        },
+      },
+      quietHours: {
+        enabled: {
+          type: Boolean,
+          default: false,
+        },
+        start: {
+          type: String,
+          default: '22:00',
+        },
+        end: {
+          type: String,
+          default: '08:00',
+        },
+      },
+      maxAlertsPerDay: {
+        type: Number,
+        default: 10,
+      },
+    },
+    pushNotificationToken: {
+      type: String,
     },
   },
   {

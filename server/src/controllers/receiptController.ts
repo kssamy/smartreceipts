@@ -1,5 +1,7 @@
 import { Response } from 'express';
 import Receipt from '../models/Receipt';
+import PriceWatch from '../models/PriceWatch';
+import User from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { keywordMatcher } from '../utils/categorization/keywordMatcher';
 import { itemNormalizer } from '../utils/itemNormalizer';
@@ -61,6 +63,44 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
     await receipt.save();
 
     logger.info(`Receipt created for user ${user.email}: ${receipt._id}`);
+
+    // Auto-create price watches for all items (Phase 2 feature)
+    try {
+      // Get user's full document to access price alert preferences
+      const fullUser = await User.findById(user._id);
+
+      if (fullUser) {
+        const priceWatches = await Promise.all(
+          processedItems.map((item: any) =>
+            PriceWatch.create({
+              userId: user._id,
+              receiptId: receipt._id,
+              itemName: item.name,
+              normalizedName: item.normalizedName,
+              category: item.category,
+              originalPrice: item.totalPrice,
+              storeName,
+              purchaseDate: new Date(date),
+              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+              thresholds: fullUser.priceAlerts?.thresholds || {
+                anyDrop: false,
+                percent10: true,
+                percent20: true,
+                percent30: true,
+              },
+              isActive: true,
+            })
+          )
+        );
+
+        logger.info(
+          `Created ${priceWatches.length} price watches for receipt ${receipt._id}`
+        );
+      }
+    } catch (error) {
+      // Don't fail the receipt creation if price watch creation fails
+      logger.error('Error creating price watches:', error);
+    }
 
     res.status(201).json({
       success: true,

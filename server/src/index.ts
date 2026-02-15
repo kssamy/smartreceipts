@@ -3,6 +3,7 @@ import app from './app';
 import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
 import logger from './utils/logger';
+import { initializePriceCheckCron } from './services/priceCheckService';
 
 // Load environment variables
 dotenv.config();
@@ -25,6 +26,10 @@ const startServer = async () => {
     } catch (redisError) {
       logger.warn('Redis connection failed - continuing without Redis:', redisError);
     }
+
+    // Initialize price check cron jobs
+    initializePriceCheckCron();
+    logger.info('Price check cron jobs initialized');
 
     // Start Express server - bind to 0.0.0.0 to accept external connections
     const server = app.listen(Number(PORT), '0.0.0.0', () => {
