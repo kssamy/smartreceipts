@@ -209,6 +209,9 @@ async function scrapeTarget(query: string): Promise<PriceResult | null> {
 async function getRequestCountToday(store: string): Promise<number> {
   try {
     const redisClient = getRedisClient();
+    if (!redisClient) {
+      return 0; // No rate limiting without Redis
+    }
     const key = `scrape_count:${store}:${new Date().toISOString().split('T')[0]}`;
     const count = await redisClient.get(key);
     return count ? parseInt(count, 10) : 0;
@@ -224,6 +227,9 @@ async function getRequestCountToday(store: string): Promise<number> {
 async function incrementRequestCount(store: string): Promise<void> {
   try {
     const redisClient = getRedisClient();
+    if (!redisClient) {
+      return; // No rate limiting without Redis
+    }
     const key = `scrape_count:${store}:${new Date().toISOString().split('T')[0]}`;
     await redisClient.incr(key);
     await redisClient.expire(key, 24 * 60 * 60); // Expire after 24 hours
