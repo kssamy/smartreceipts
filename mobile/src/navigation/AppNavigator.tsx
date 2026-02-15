@@ -13,12 +13,13 @@ import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ReceiptsScreen from '../screens/receipts/ReceiptsScreen';
 import ScanScreen from '../screens/scan/ScanScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
-import PrivacyScreen from '../screens/profile/PrivacyScreen';
-import TermsScreen from '../screens/profile/TermsScreen';
 
 // Price Watch Screens
 import PriceWatchListScreen from '../screens/priceWatch/PriceWatchListScreen';
 import PriceHistoryScreen from '../screens/priceWatch/PriceHistoryScreen';
+
+// Legal Screens
+import { PrivacyPolicyScreen, TermsScreen } from '../screens/legal';
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -44,13 +45,13 @@ function ProfileNavigator() {
       />
       <Stack.Screen
         name="Privacy"
-        component={PrivacyScreen}
-        options={{ headerTitle: 'Privacy & Data' }}
+        component={PrivacyPolicyScreen}
+        options={{ headerTitle: 'Privacy Policy' }}
       />
       <Stack.Screen
         name="Terms"
         component={TermsScreen}
-        options={{ headerTitle: 'Terms of Service' }}
+        options={{ headerTitle: 'Terms & Conditions' }}
       />
     </Stack.Navigator>
   );
