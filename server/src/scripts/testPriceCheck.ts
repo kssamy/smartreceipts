@@ -4,6 +4,12 @@ import { connectRedis } from '../config/redis';
 import { runDailyPriceCheck } from '../services/priceCheckService';
 import logger from '../utils/logger';
 
+// Import all models to register schemas
+import '../models/User';
+import '../models/PriceWatch';
+import '../models/PriceHistory';
+import '../models/PriceAlert';
+
 // Load environment variables
 dotenv.config();
 
