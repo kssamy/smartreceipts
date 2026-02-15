@@ -11,6 +11,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 // Main Screens
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ReceiptsScreen from '../screens/receipts/ReceiptsScreen';
+import ReceiptDetailScreen from '../screens/receipts/ReceiptDetailScreen';
 import ScanScreen from '../screens/scan/ScanScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 
@@ -57,6 +58,24 @@ function ProfileNavigator() {
   );
 }
 
+// Receipts Stack Navigator
+function ReceiptsNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="ReceiptsList"
+        component={ReceiptsScreen}
+        options={{ headerTitle: 'My Receipts' }}
+      />
+      <Stack.Screen
+        name="ReceiptDetail"
+        component={ReceiptDetailScreen}
+        options={{ headerTitle: 'Receipt Details' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 // Price Watch Stack Navigator
 function PriceWatchNavigator() {
   return (
@@ -98,10 +117,11 @@ function MainNavigator() {
       />
       <Tab.Screen
         name="Receipts"
-        component={ReceiptsScreen}
+        component={ReceiptsNavigator}
         options={{
           tabBarLabel: 'Receipts',
           headerTitle: 'My Receipts',
+          headerShown: false,
         }}
       />
       <Tab.Screen

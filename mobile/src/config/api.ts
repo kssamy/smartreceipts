@@ -18,6 +18,7 @@ export const API_ENDPOINTS = {
   // Receipts
   RECEIPTS: '/receipts',
   RECEIPT_BY_ID: (id: string) => `/receipts/${id}`,
+  RECEIPT_TOGGLE_TRACKING: (id: string) => `/receipts/${id}/items/toggle-tracking`,
 
   // Analytics
   DASHBOARD_OVERVIEW: '/analytics/overview',

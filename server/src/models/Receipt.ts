@@ -8,6 +8,7 @@ export interface IReceiptItem {
   unitPrice: number;
   totalPrice: number;
   confidence?: number;
+  priceTrack?: boolean;
 }
 
 export interface IReceipt extends Document {
@@ -77,6 +78,10 @@ const receiptItemSchema = new Schema<IReceiptItem>(
       type: Number,
       min: 0,
       max: 100,
+    },
+    priceTrack: {
+      type: Boolean,
+      default: true,
     },
   },
   { _id: false }

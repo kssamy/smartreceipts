@@ -95,6 +95,9 @@ export const receiptAPI = {
   update: (id: string, data: any) => api.put(API_ENDPOINTS.RECEIPT_BY_ID(id), data),
 
   delete: (id: string) => api.delete(API_ENDPOINTS.RECEIPT_BY_ID(id)),
+
+  toggleItemPriceTracking: (id: string, data: { itemIndex: number; priceTrack: boolean }) =>
+    api.patch(API_ENDPOINTS.RECEIPT_TOGGLE_TRACKING(id), data),
 };
 
 export const analyticsAPI = {

@@ -70,28 +70,7 @@ export default function ReceiptsScreen({ navigation }: any) {
   };
 
   const viewReceiptDetails = (receipt: any) => {
-    // For now, show an alert with receipt details
-    // TODO: Create a detailed view screen
-    const itemsList = receipt.items.map((item: any) =>
-      `• ${item.name}: $${item.totalPrice.toFixed(2)}`
-    ).join('\n');
-
-    const tipLine = receipt.tip && receipt.tip > 0
-      ? `Tip: $${receipt.tip.toFixed(2)}\n`
-      : '';
-
-    Alert.alert(
-      receipt.storeName,
-      `${format(new Date(receipt.date), 'MMM dd, yyyy')}\n${receipt.storeAddress || ''}\n\n${itemsList}\n\nSubtotal: $${receipt.subtotal?.toFixed(2) || '0.00'}\nTax: $${receipt.tax?.toFixed(2) || '0.00'}\n${tipLine}Total: $${receipt.total.toFixed(2)}`,
-      [
-        { text: 'OK' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteReceipt(receipt._id),
-        },
-      ]
-    );
+    navigation.navigate('ReceiptDetail', { receiptId: receipt._id });
   };
 
   const renderReceiptItem = ({ item }: { item: any }) => (

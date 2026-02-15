@@ -40,6 +40,7 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
         unitPrice: item.unitPrice || item.totalPrice,
         totalPrice: item.totalPrice,
         confidence: item.confidence,
+        priceTrack: item.priceTrack !== undefined ? item.priceTrack : true, // Default to true
       };
     });
 
@@ -64,38 +65,45 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
 
     logger.info(`Receipt created for user ${user.email}: ${receipt._id}`);
 
-    // Auto-create price watches for all items (Phase 2 feature)
+    // Auto-create price watches only for items with priceTrack enabled (Phase 2 feature)
     try {
       // Get user's full document to access price alert preferences
       const fullUser = await User.findById(user._id);
 
       if (fullUser) {
-        const priceWatches = await Promise.all(
-          processedItems.map((item: any) =>
-            PriceWatch.create({
-              userId: user._id,
-              receiptId: receipt._id,
-              itemName: item.name,
-              normalizedName: item.normalizedName,
-              category: item.category,
-              originalPrice: item.totalPrice,
-              storeName,
-              purchaseDate: new Date(date),
-              expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-              thresholds: fullUser.priceAlerts?.thresholds || {
-                anyDrop: false,
-                percent10: true,
-                percent20: true,
-                percent30: true,
-              },
-              isActive: true,
-            })
-          )
-        );
+        // Filter items that have priceTrack enabled
+        const itemsToTrack = processedItems.filter((item: any) => item.priceTrack === true);
 
-        logger.info(
-          `Created ${priceWatches.length} price watches for receipt ${receipt._id}`
-        );
+        if (itemsToTrack.length > 0) {
+          const priceWatches = await Promise.all(
+            itemsToTrack.map((item: any) =>
+              PriceWatch.create({
+                userId: user._id,
+                receiptId: receipt._id,
+                itemName: item.name,
+                normalizedName: item.normalizedName,
+                category: item.category,
+                originalPrice: item.totalPrice,
+                storeName,
+                purchaseDate: new Date(date),
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+                thresholds: fullUser.priceAlerts?.thresholds || {
+                  anyDrop: false,
+                  percent10: true,
+                  percent20: true,
+                  percent30: true,
+                },
+                isActive: true,
+              })
+            )
+          );
+
+          logger.info(
+            `Created ${priceWatches.length} price watches for receipt ${receipt._id} (${itemsToTrack.length} of ${processedItems.length} items tracked)`
+          );
+        } else {
+          logger.info(`No price watches created for receipt ${receipt._id} (no items selected for tracking)`);
+        }
       }
     } catch (error) {
       // Don't fail the receipt creation if price watch creation fails
@@ -272,6 +280,7 @@ export const updateReceipt = async (req: AuthRequest, res: Response): Promise<vo
           unitPrice: item.unitPrice || item.totalPrice,
           totalPrice: item.totalPrice,
           confidence: item.confidence,
+          priceTrack: item.priceTrack !== undefined ? item.priceTrack : true,
         };
       });
 
@@ -294,6 +303,122 @@ export const updateReceipt = async (req: AuthRequest, res: Response): Promise<vo
     res.status(500).json({
       success: false,
       message: 'Failed to update receipt',
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Toggle price tracking for a specific item in a receipt
+ */
+export const toggleItemPriceTracking = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = req.user;
+    const { id } = req.params; // receipt ID
+    const { itemIndex, priceTrack } = req.body;
+
+    if (!user) {
+      res.status(401).json({
+        success: false,
+        message: 'User not authenticated',
+      });
+      return;
+    }
+
+    if (itemIndex === undefined || priceTrack === undefined) {
+      res.status(400).json({
+        success: false,
+        message: 'itemIndex and priceTrack are required',
+      });
+      return;
+    }
+
+    const receipt = await Receipt.findOne({ _id: id, userId: user._id });
+
+    if (!receipt) {
+      res.status(404).json({
+        success: false,
+        message: 'Receipt not found',
+      });
+      return;
+    }
+
+    if (itemIndex < 0 || itemIndex >= receipt.items.length) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid item index',
+      });
+      return;
+    }
+
+    // Update the priceTrack field for the specific item
+    receipt.items[itemIndex].priceTrack = priceTrack;
+    await receipt.save();
+
+    const item = receipt.items[itemIndex];
+
+    // If enabling price tracking, create a new PriceWatch
+    if (priceTrack) {
+      try {
+        const fullUser = await User.findById(user._id);
+
+        if (fullUser) {
+          const priceWatch = await PriceWatch.create({
+            userId: user._id,
+            receiptId: receipt._id,
+            itemName: item.name,
+            normalizedName: item.normalizedName,
+            category: item.category,
+            originalPrice: item.totalPrice,
+            storeName: receipt.storeName,
+            purchaseDate: receipt.date,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+            thresholds: fullUser.priceAlerts?.thresholds || {
+              anyDrop: false,
+              percent10: true,
+              percent20: true,
+              percent30: true,
+            },
+            isActive: true,
+          });
+
+          logger.info(`Created price watch for item ${item.name} in receipt ${receipt._id}`);
+        }
+      } catch (error) {
+        logger.error('Error creating price watch:', error);
+      }
+    } else {
+      // If disabling price tracking, deactivate existing PriceWatch
+      try {
+        await PriceWatch.updateMany(
+          {
+            receiptId: receipt._id,
+            normalizedName: item.normalizedName,
+            isActive: true,
+          },
+          {
+            $set: { isActive: false },
+          }
+        );
+
+        logger.info(`Deactivated price watch for item ${item.name} in receipt ${receipt._id}`);
+      } catch (error) {
+        logger.error('Error deactivating price watch:', error);
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Price tracking updated successfully',
+      data: {
+        receipt,
+      },
+    });
+  } catch (error: any) {
+    logger.error('Toggle price tracking error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update price tracking',
       error: error.message,
     });
   }

@@ -7,6 +7,7 @@ import {
   getReceiptById,
   updateReceipt,
   deleteReceipt,
+  toggleItemPriceTracking,
 } from '../controllers/receiptController';
 import { authenticate } from '../middleware/auth';
 
@@ -55,6 +56,20 @@ router.get('/:id', getReceiptById);
  * @access  Private
  */
 router.put('/:id', updateReceipt);
+
+/**
+ * @route   PATCH /api/v1/receipts/:id/items/toggle-tracking
+ * @desc    Toggle price tracking for a specific item
+ * @access  Private
+ */
+router.patch(
+  '/:id/items/toggle-tracking',
+  validate([
+    body('itemIndex').isInt({ min: 0 }).withMessage('Valid item index is required'),
+    body('priceTrack').isBoolean().withMessage('priceTrack must be a boolean'),
+  ]),
+  toggleItemPriceTracking
+);
 
 /**
  * @route   DELETE /api/v1/receipts/:id
