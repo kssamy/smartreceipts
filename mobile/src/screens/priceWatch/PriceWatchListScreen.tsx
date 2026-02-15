@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Alert,
+  Animated,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { priceWatchAPI } from '../../services/api';
 
 interface PriceWatch {
@@ -50,6 +53,59 @@ export default function PriceWatchListScreen({ navigation }: any) {
     loadPriceWatches();
   };
 
+  const deletePriceWatch = async (watchId: string, itemName: string) => {
+    Alert.alert(
+      'Stop Tracking',
+      `Stop tracking price changes for "${itemName}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Stop Tracking',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await priceWatchAPI.delete(watchId);
+              setWatches(watches.filter((w) => w._id !== watchId));
+            } catch (error) {
+              console.error('Failed to delete price watch:', error);
+              Alert.alert('Error', 'Failed to stop tracking this item');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>,
+    item: PriceWatch
+  ) => {
+    const trans = dragX.interpolate({
+      inputRange: [-100, 0],
+      outputRange: [0, 100],
+      extrapolate: 'clamp',
+    });
+
+    return (
+      <Animated.View
+        style={[
+          styles.deleteAction,
+          {
+            transform: [{ translateX: trans }],
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={() => deletePriceWatch(item._id, item.itemName)}
+        >
+          <Text style={styles.deleteButtonText}>Delete</Text>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  };
+
   const renderPriceWatch = ({ item }: { item: PriceWatch }) => {
     const savings = item.bestPriceFound
       ? item.originalPrice - item.bestPriceFound.price
@@ -64,61 +120,66 @@ export default function PriceWatchListScreen({ navigation }: any) {
     );
 
     return (
-      <TouchableOpacity
-        style={styles.watchCard}
-        onPress={() => navigation.navigate('PriceHistory', { watchId: item._id })}
+      <Swipeable
+        renderRightActions={(progress, dragX) => renderRightActions(progress, dragX, item)}
+        overshootRight={false}
       >
-        <View style={styles.watchHeader}>
-          <Text style={styles.itemName} numberOfLines={2}>
-            {item.itemName}
-          </Text>
-          <View style={[
-            styles.daysLeft,
-            daysLeft < 7 && styles.daysLeftWarning
-          ]}>
-            <Text style={[
-              styles.daysLeftText,
-              daysLeft < 7 && styles.daysLeftTextWarning
-            ]}>
-              {daysLeft}d left
+        <TouchableOpacity
+          style={styles.watchCard}
+          onPress={() => navigation.navigate('PriceHistory', { watchId: item._id })}
+        >
+          <View style={styles.watchHeader}>
+            <Text style={styles.itemName} numberOfLines={2}>
+              {item.itemName}
             </Text>
-          </View>
-        </View>
-
-        <Text style={styles.storeName}>{item.storeName}</Text>
-
-        <View style={styles.priceRow}>
-          <View style={styles.priceSection}>
-            <Text style={styles.label}>You Paid</Text>
-            <Text style={styles.originalPrice}>${item.originalPrice.toFixed(2)}</Text>
-          </View>
-
-          {item.bestPriceFound && (
-            <>
-              <View style={styles.priceSection}>
-                <Text style={styles.label}>Best Price</Text>
-                <Text style={styles.newPrice}>${item.bestPriceFound.price.toFixed(2)}</Text>
-                <Text style={styles.store}>{item.bestPriceFound.store}</Text>
-              </View>
-
-              <View style={styles.savingsSection}>
-                <Text style={styles.savingsText}>
-                  Save ${savings.toFixed(2)}
-                </Text>
-                <Text style={styles.savingsPercent}>
-                  ({savingsPercent.toFixed(0)}% off)
-                </Text>
-              </View>
-            </>
-          )}
-
-          {!item.bestPriceFound && (
-            <View style={styles.noDataSection}>
-              <Text style={styles.noDataText}>Checking prices...</Text>
+            <View style={[
+              styles.daysLeft,
+              daysLeft < 7 && styles.daysLeftWarning
+            ]}>
+              <Text style={[
+                styles.daysLeftText,
+                daysLeft < 7 && styles.daysLeftTextWarning
+              ]}>
+                {daysLeft}d left
+              </Text>
             </View>
-          )}
-        </View>
-      </TouchableOpacity>
+          </View>
+
+          <Text style={styles.storeName}>{item.storeName}</Text>
+
+          <View style={styles.priceRow}>
+            <View style={styles.priceSection}>
+              <Text style={styles.label}>You Paid</Text>
+              <Text style={styles.originalPrice}>${item.originalPrice.toFixed(2)}</Text>
+            </View>
+
+            {item.bestPriceFound && (
+              <>
+                <View style={styles.priceSection}>
+                  <Text style={styles.label}>Best Price</Text>
+                  <Text style={styles.newPrice}>${item.bestPriceFound.price.toFixed(2)}</Text>
+                  <Text style={styles.store}>{item.bestPriceFound.store}</Text>
+                </View>
+
+                <View style={styles.savingsSection}>
+                  <Text style={styles.savingsText}>
+                    Save ${savings.toFixed(2)}
+                  </Text>
+                  <Text style={styles.savingsPercent}>
+                    ({savingsPercent.toFixed(0)}% off)
+                  </Text>
+                </View>
+              </>
+            )}
+
+            {!item.bestPriceFound && (
+              <View style={styles.noDataSection}>
+                <Text style={styles.noDataText}>Checking prices...</Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+      </Swipeable>
     );
   };
 
@@ -296,5 +357,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     textAlign: 'center',
+  },
+  deleteAction: {
+    backgroundColor: '#FF3B30',
+    justifyContent: 'center',
+    alignItems: 'flex-end',
+    marginVertical: 8,
+    marginRight: 16,
+    borderTopRightRadius: 12,
+    borderBottomRightRadius: 12,
+  },
+  deleteButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 100,
+    height: '100%',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
