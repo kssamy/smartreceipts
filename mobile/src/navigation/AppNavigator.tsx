@@ -16,6 +16,10 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import PrivacyScreen from '../screens/profile/PrivacyScreen';
 import TermsScreen from '../screens/profile/TermsScreen';
 
+// Price Watch Screens
+import PriceWatchListScreen from '../screens/priceWatch/PriceWatchListScreen';
+import PriceHistoryScreen from '../screens/priceWatch/PriceHistoryScreen';
+
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -52,6 +56,24 @@ function ProfileNavigator() {
   );
 }
 
+// Price Watch Stack Navigator
+function PriceWatchNavigator() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen
+        name="PriceWatchList"
+        component={PriceWatchListScreen}
+        options={{ headerTitle: 'Price Tracker' }}
+      />
+      <Stack.Screen
+        name="PriceHistory"
+        component={PriceHistoryScreen}
+        options={{ headerTitle: 'Price History' }}
+      />
+    </Stack.Navigator>
+  );
+}
+
 // Main Tab Navigator
 function MainNavigator() {
   return (
@@ -79,6 +101,15 @@ function MainNavigator() {
         options={{
           tabBarLabel: 'Receipts',
           headerTitle: 'My Receipts',
+        }}
+      />
+      <Tab.Screen
+        name="PriceWatch"
+        component={PriceWatchNavigator}
+        options={{
+          tabBarLabel: 'Tracker',
+          headerTitle: 'Price Tracker',
+          headerShown: false,
         }}
       />
       <Tab.Screen

@@ -80,7 +80,7 @@ export const authAPI = {
 
   getProfile: () => api.get(API_ENDPOINTS.PROFILE),
 
-  updateProfile: (data: { name?: string; settings?: any }) =>
+  updateProfile: (data: { name?: string; settings?: any; pushNotificationToken?: string }) =>
     api.put(API_ENDPOINTS.PROFILE, data),
 };
 
