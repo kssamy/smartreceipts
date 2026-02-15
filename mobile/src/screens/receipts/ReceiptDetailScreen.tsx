@@ -170,8 +170,8 @@ export default function ReceiptDetailScreen({ route, navigation }: any) {
                   <ActivityIndicator size="small" color="#007AFF" />
                 ) : (
                   <Switch
-                    value={item.priceTrack ?? true}
-                    onValueChange={() => togglePriceTracking(index, item.priceTrack ?? true)}
+                    value={item.priceTrack ?? false}
+                    onValueChange={() => togglePriceTracking(index, item.priceTrack ?? false)}
                     trackColor={{ false: '#767577', true: '#81b0ff' }}
                     thumbColor={item.priceTrack ? '#007AFF' : '#f4f3f4'}
                   />

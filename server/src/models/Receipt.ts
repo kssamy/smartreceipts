@@ -81,7 +81,7 @@ const receiptItemSchema = new Schema<IReceiptItem>(
     },
     priceTrack: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   { _id: false }

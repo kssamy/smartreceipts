@@ -40,7 +40,7 @@ export const createReceipt = async (req: AuthRequest, res: Response): Promise<vo
         unitPrice: item.unitPrice || item.totalPrice,
         totalPrice: item.totalPrice,
         confidence: item.confidence,
-        priceTrack: item.priceTrack !== undefined ? item.priceTrack : true, // Default to true
+        priceTrack: item.priceTrack !== undefined ? item.priceTrack : false, // Default to false
       };
     });
 
@@ -280,7 +280,7 @@ export const updateReceipt = async (req: AuthRequest, res: Response): Promise<vo
           unitPrice: item.unitPrice || item.totalPrice,
           totalPrice: item.totalPrice,
           confidence: item.confidence,
-          priceTrack: item.priceTrack !== undefined ? item.priceTrack : true,
+          priceTrack: item.priceTrack !== undefined ? item.priceTrack : false,
         };
       });
 
