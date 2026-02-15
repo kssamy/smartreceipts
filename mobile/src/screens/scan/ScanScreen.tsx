@@ -245,7 +245,8 @@ export default function ScanScreen({ navigation }: any) {
       'app label', 'tip', 'gratuity', '%', 'percent', 'date', 'time', 'cashier', 'item', 'iten', 'items',
       'transaction', 'purchase', 'customer', 'copy', 'verification', 'cardholder', 'retain', 'records',
       'tid', 'mid', 'code', 'id:', 'type:', 'auth',
-      'please', 'daily', 'welcome', 'manager', 'balance', 'shopping', 'shopptng', 'thank', 'yol'
+      'please', 'daily', 'welcome', 'manager', 'balance', 'shopping', 'shopptng', 'thank', 'yol',
+      'wholesale', 'member', 'membership'
     ];
 
     // Modifiers to skip (these modify items but aren't items themselves)
@@ -264,15 +265,29 @@ export default function ScanScreen({ navigation }: any) {
       if (lower.includes('cashier') || lower.includes('till') || lower.includes('reg')) return false;
       if (line.match(/^\d+$/)) return false; // Just numbers
       if (line.match(/^[A-Z]{2,}\s+\d+$/)) return false; // State + zip
+      if (line.match(/^\(\d{3}\)/)) return false; // Phone numbers like (415) 516-4441
+      if (line.match(/^\d{3,}\s+[A-Z]/)) return false; // Addresses like "412 Marina Bay"
+      if (line.match(/,\s*[A-Z]{2}\s+\d{5}/)) return false; // City/state/zip
       // Store name is usually 4-40 chars, alphanumeric with spaces/apostrophes
       return line.length >= 4 && line.length <= 40;
     });
 
-    // Pick the first candidate that looks like a store name (all caps or title case)
+    // Pick the first candidate that looks like a store name
+    // Prefer ALL CAPS store names (most common on receipts) over title case
     for (const candidate of storeNameCandidates) {
-      if (candidate.match(/^[A-Z][A-Z\s'&.-]+$/) || candidate.match(/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/)) {
+      if (candidate.match(/^[A-Z][A-Z\s'&.)\-]+$/)) {
         storeName = candidate;
         break;
+      }
+    }
+
+    // If no all-caps store name found, try title case
+    if (storeName === 'Unknown Store') {
+      for (const candidate of storeNameCandidates) {
+        if (candidate.match(/^[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/)) {
+          storeName = candidate;
+          break;
+        }
       }
     }
 
@@ -419,7 +434,7 @@ export default function ScanScreen({ navigation }: any) {
       console.log('📋 Using SEQUENTIAL matching for columnar layout');
 
       // Helper function to validate item candidates
-      const isValidItemCandidate = (text: string): boolean => {
+      const isValidItemCandidate = (text: string, blockIndex: number): boolean => {
         if (text.match(/^\$?[\dSs]+\.?\d{0,2}$/)) return false; // Skip prices with S or s (OCR error for $)
         if (text.match(/^\d+[,.]?\d*%?$/)) return false;
         if (text.match(/^\$[\d\s.]+$/)) return false;
@@ -434,14 +449,39 @@ export default function ScanScreen({ navigation }: any) {
         if (text.match(/,\s*[A-Z]{2}$/)) return false;
         if (text.match(/^\d{5}(-\d{4})?$/)) return false;
 
-        // Filter out street addresses (number + street name)
-        // "300 Market Place", "123 Main Street", etc.
-        if (text.match(/^\d{1,5}\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*$/i)) {
-          const lower = text.toLowerCase();
-          const streetWords = ['street', 'st', 'avenue', 'ave', 'road', 'rd', 'drive', 'dr', 'lane',
-                              'ln', 'way', 'place', 'pl', 'court', 'ct', 'boulevard', 'blvd',
-                              'market', 'plaza', 'parkway', 'circle'];
-          if (streetWords.some(word => lower.includes(word))) {
+        // Filter out phone numbers
+        if (text.match(/^\(\d{3}\)/)) return false;
+
+        // Filter out city/state/zip lines like "SAN FRANCISCO, CA 91232"
+        if (text.match(/,\s*[A-Z]{2}\s+\d{5}/)) {
+          console.log(`❌ Filtered out city/state/zip: "${text}"`);
+          return false;
+        }
+
+        // Filter out store location patterns like "Greenville #1005"
+        if (text.match(/#\d+/)) {
+          console.log(`❌ Filtered out store location: "${text}"`);
+          return false;
+        }
+
+        // Filter out membership numbers like "V5 Member 11117324950"
+        if (text.match(/^[A-Z]\d+\s+(Member|Membership)\s+\d{10,}/i)) {
+          console.log(`❌ Filtered out membership number: "${text}"`);
+          return false;
+        }
+
+        // Filter out street addresses ONLY if they have 3+ digits OR contain typical street words
+        // This avoids filtering items like "1 Pasta Sauce" which start with small quantity numbers
+        if (blockIndex < 15) {  // Check in header and early item section
+          const hasHighNumber = text.match(/^\d{3,}\s+/);  // 100+ = likely address
+          const lowerText = text.toLowerCase();
+
+          // Use word boundary matching to avoid false matches like "pasta" containing "st"
+          const streetPattern = /\b(street|st|avenue|ave|road|rd|drive|dr|lane|ln|way|place|pl|court|ct|boulevard|blvd|marina|bay|plaza|parkway|circle|square)\b/;
+          const hasStreetWord = streetPattern.test(lowerText);
+
+          if (hasHighNumber || (text.match(/^\d{1,3}\s+[A-Z]/i) && hasStreetWord)) {
+            console.log(`❌ Filtered out address: "${text}"`);
             return false;
           }
         }
@@ -457,12 +497,8 @@ export default function ScanScreen({ navigation }: any) {
         const hasLetters = (text.match(/[a-zA-Z]/g) || []).length >= 3;
         if (!hasLetters) return false;
 
-        const isSingleWord = text.split(/\s+/).length === 1;
-        const isTitleCase = text.length > 2 &&
-                           text[0] === text[0].toUpperCase() &&
-                           text.slice(1) === text.slice(1).toLowerCase();
-        const likelyCashierName = isSingleWord && isTitleCase && text.length < 15;
-        if (likelyCashierName) return false;
+        // Don't filter single-word items - "Bananas", "Carrots", "Milk" are valid items
+        // Cashier names typically appear on their own line before items, and are rare
 
         // Filter out store name - multiple checks for robustness
         // 1. Exact match with various apostrophe normalizations
@@ -492,13 +528,15 @@ export default function ScanScreen({ navigation }: any) {
         if (processedIndices.has(i)) continue;
 
         // Stop collecting items after we hit tax/total section
+        // Normalize text to handle OCR errors (spaces, etc.)
         const lower = blocks[i].text.toLowerCase();
-        if (endKeywords.some(keyword => lower.includes(keyword))) {
+        const normalized = lower.replace(/\s+/g, ''); // Remove all spaces for matching
+        if (endKeywords.some(keyword => lower.includes(keyword) || normalized.includes(keyword.replace(/\s+/g, '')))) {
           console.log(`⏹️ Stopped collecting items at: "${blocks[i].text}"`);
           break;
         }
 
-        if (isValidItemCandidate(blocks[i].text)) {
+        if (isValidItemCandidate(blocks[i].text, i)) {
           itemCandidates.push({ index: i, text: blocks[i].text });
           console.log(`✅ Item candidate #${itemCandidates.length}: "${blocks[i].text}"`);
         }
@@ -507,21 +545,35 @@ export default function ScanScreen({ navigation }: any) {
       console.log(`📝 Found ${itemCandidates.length} item candidates total`);
 
       // Merge split item names (e.g., "SEMI SHEET CHOC" + "CHIPS" → "SEMI SHEET CHOC CHIPS")
-      // If a candidate is a single short word following another candidate, merge them
+      // Only merge if next item is a single short word AND current item looks incomplete
       const mergedItemCandidates: { index: number; text: string }[] = [];
       for (let i = 0; i < itemCandidates.length; i++) {
         const current = itemCandidates[i];
         const next = itemCandidates[i + 1];
 
-        // Check if next item is a single short word (likely a continuation)
-        if (next && next.text.split(/\s+/).length === 1 && next.text.length <= 10) {
-          // Merge current and next
-          mergedItemCandidates.push({
-            index: current.index,
-            text: current.text + ' ' + next.text
-          });
-          console.log(`🔗 Merged split item: "${current.text}" + "${next.text}" → "${current.text + ' ' + next.text}"`);
-          i++; // Skip next since we merged it
+        if (next) {
+          const nextWords = next.text.split(/\s+/);
+          const currentWords = current.text.split(/\s+/);
+          const nextIsSingleWord = nextWords.length === 1 && next.text.length <= 10;
+          const nextStartsWithNumber = /^\d/.test(next.text);
+          const currentIsMultiWord = currentWords.length >= 2;
+          const currentIsAllCaps = current.text === current.text.toUpperCase() && current.text.match(/[A-Z]{3,}/);
+
+          // Only merge if:
+          // 1. Next is single short word AND doesn't start with number (quantity)
+          // 2. Current has multiple words OR is all caps (suggesting incomplete name)
+          const shouldMerge = nextIsSingleWord && !nextStartsWithNumber && (currentIsMultiWord || currentIsAllCaps);
+
+          if (shouldMerge) {
+            mergedItemCandidates.push({
+              index: current.index,
+              text: current.text + ' ' + next.text
+            });
+            console.log(`🔗 Merged split item: "${current.text}" + "${next.text}" → "${current.text + ' ' + next.text}"`);
+            i++; // Skip next since we merged it
+          } else {
+            mergedItemCandidates.push(current);
+          }
         } else {
           mergedItemCandidates.push(current);
         }
@@ -559,6 +611,9 @@ export default function ScanScreen({ navigation }: any) {
         if (block.text.includes('$')) {
           // Handle OCR errors in prices with spaces: "$4 4.99" → "$4.99", "$0.1 10" → "$0.10"
           let cleanedText = block.text;
+
+          // Fix: commas as decimal separators: "$1,12" → "$1.12", "$2,99" → "$2.99", "$23,16" → "$23.16"
+          cleanedText = cleanedText.replace(/\$(\d+),(\d{2})/g, '$$$1.$2');
 
           // Fix: "digit space digit.dd" pattern → "digit.dd" (e.g., "$4 4.99" → "$4.99", "3 3.49" → "3.49")
           cleanedText = cleanedText.replace(/\$?\d+\s+(\d+\.\d{2})/g, '$$$1');
@@ -917,6 +972,28 @@ export default function ScanScreen({ navigation }: any) {
     });
   };
 
+  // Helper function to recalculate subtotal and total based on item prices, tax, and tip
+  const recalculateTotals = (data: any) => {
+    // Calculate subtotal from item prices
+    const calculatedSubtotal = data.items.reduce((sum: number, item: any) => {
+      const price = typeof item.totalPrice === 'string' ? parseFloat(item.totalPrice) : item.totalPrice;
+      return sum + (isNaN(price) ? 0 : price);
+    }, 0);
+
+    // Get tax and tip values
+    const tax = typeof data.tax === 'string' ? parseFloat(data.tax) : (typeof data.tax === 'number' ? data.tax : 0);
+    const tip = typeof data.tip === 'string' ? parseFloat(data.tip) : (typeof data.tip === 'number' ? data.tip : 0);
+
+    // Calculate total
+    const calculatedTotal = calculatedSubtotal + (isNaN(tax) ? 0 : tax) + (isNaN(tip) ? 0 : tip);
+
+    return {
+      ...data,
+      subtotal: calculatedSubtotal,
+      total: calculatedTotal
+    };
+  };
+
   const saveReceipt = async () => {
     if (!receiptData) return;
 
@@ -1011,13 +1088,15 @@ export default function ScanScreen({ navigation }: any) {
                   setReceiptData({ ...receiptData, items: newItems });
                 }}
                 onBlur={() => {
-                  // Convert to number when user finishes editing
+                  // Convert to number when user finishes editing and recalculate totals
                   const newItems = [...receiptData.items];
                   const value = newItems[index].totalPrice;
                   if (typeof value === 'string') {
                     const parsed = parseFloat(value);
                     newItems[index].totalPrice = isNaN(parsed) ? 0 : parsed;
-                    setReceiptData({ ...receiptData, items: newItems });
+                    // Recalculate subtotal and total
+                    const updatedData = recalculateTotals({ ...receiptData, items: newItems });
+                    setReceiptData(updatedData);
                   }
                 }}
                 placeholder="0.00"
@@ -1027,7 +1106,9 @@ export default function ScanScreen({ navigation }: any) {
                 style={styles.deleteButton}
                 onPress={() => {
                   const newItems = receiptData.items.filter((_: any, i: number) => i !== index);
-                  setReceiptData({ ...receiptData, items: newItems });
+                  // Recalculate subtotal and total after deleting item
+                  const updatedData = recalculateTotals({ ...receiptData, items: newItems });
+                  setReceiptData(updatedData);
                 }}
               >
                 <Text style={styles.deleteButtonText}>🗑️</Text>
@@ -1065,9 +1146,9 @@ export default function ScanScreen({ navigation }: any) {
               if (typeof receiptData.subtotal === 'string') {
                 const parsed = parseFloat(receiptData.subtotal);
                 const subtotal = isNaN(parsed) ? 0 : parsed;
-                const tax = typeof receiptData.tax === 'number' ? receiptData.tax : 0;
-                const tip = typeof receiptData.tip === 'number' ? receiptData.tip : 0;
-                const calculatedTotal = subtotal + tax + tip;
+                const tax = typeof receiptData.tax === 'string' ? parseFloat(receiptData.tax) : (typeof receiptData.tax === 'number' ? receiptData.tax : 0);
+                const tip = typeof receiptData.tip === 'string' ? parseFloat(receiptData.tip) : (typeof receiptData.tip === 'number' ? receiptData.tip : 0);
+                const calculatedTotal = subtotal + (isNaN(tax) ? 0 : tax) + (isNaN(tip) ? 0 : tip);
                 setReceiptData({
                   ...receiptData,
                   subtotal,
@@ -1096,14 +1177,9 @@ export default function ScanScreen({ navigation }: any) {
               if (typeof receiptData.tax === 'string') {
                 const parsed = parseFloat(receiptData.tax);
                 const tax = isNaN(parsed) ? 0 : parsed;
-                const subtotal = typeof receiptData.subtotal === 'number' ? receiptData.subtotal : 0;
-                const tip = typeof receiptData.tip === 'number' ? receiptData.tip : 0;
-                const calculatedTotal = subtotal + tax + tip;
-                setReceiptData({
-                  ...receiptData,
-                  tax,
-                  total: calculatedTotal
-                });
+                // Recalculate subtotal and total
+                const updatedData = recalculateTotals({ ...receiptData, tax });
+                setReceiptData(updatedData);
               }
             }}
             placeholder="0.00"
@@ -1127,14 +1203,9 @@ export default function ScanScreen({ navigation }: any) {
               if (typeof receiptData.tip === 'string') {
                 const parsed = parseFloat(receiptData.tip);
                 const tip = isNaN(parsed) ? 0 : parsed;
-                const subtotal = typeof receiptData.subtotal === 'number' ? receiptData.subtotal : 0;
-                const tax = typeof receiptData.tax === 'number' ? receiptData.tax : 0;
-                const calculatedTotal = subtotal + tax + tip;
-                setReceiptData({
-                  ...receiptData,
-                  tip,
-                  total: calculatedTotal
-                });
+                // Recalculate subtotal and total
+                const updatedData = recalculateTotals({ ...receiptData, tip });
+                setReceiptData(updatedData);
               }
             }}
             placeholder="0.00"
