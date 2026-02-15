@@ -25,4 +25,12 @@ export const API_ENDPOINTS = {
   SPENDING_TRENDS: '/analytics/trends',
   TOP_ITEMS: '/analytics/top-items',
   SPENDING_BY_STORE: '/analytics/stores',
+
+  // Price Watch (Phase 2)
+  PRICE_WATCH: '/price-watch',
+  PRICE_WATCH_BY_ID: (id: string) => `/price-watch/${id}`,
+  PRICE_WATCH_HISTORY: (id: string) => `/price-watch/${id}/history`,
+  PRICE_WATCH_THRESHOLDS: (id: string) => `/price-watch/${id}/thresholds`,
+  PRICE_WATCH_ALERTS: '/price-watch/alerts',
+  PRICE_WATCH_SAVINGS: '/price-watch/savings',
 };

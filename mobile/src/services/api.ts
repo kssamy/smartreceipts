@@ -113,3 +113,36 @@ export const analyticsAPI = {
   getSpendingByStore: (params?: { startDate?: string; endDate?: string }) =>
     api.get(API_ENDPOINTS.SPENDING_BY_STORE, { params }),
 };
+
+export const priceWatchAPI = {
+  getList: () => api.get(API_ENDPOINTS.PRICE_WATCH),
+
+  getById: (id: string) => api.get(API_ENDPOINTS.PRICE_WATCH_BY_ID(id)),
+
+  getHistory: (id: string) => api.get(API_ENDPOINTS.PRICE_WATCH_HISTORY(id)),
+
+  create: (data: {
+    itemName: string;
+    normalizedName?: string;
+    category?: string;
+    originalPrice: number;
+    storeName: string;
+    purchaseDate?: string;
+  }) => api.post(API_ENDPOINTS.PRICE_WATCH, data),
+
+  updateThresholds: (
+    id: string,
+    thresholds: {
+      anyDrop?: boolean;
+      percent10?: boolean;
+      percent20?: boolean;
+      percent30?: boolean;
+    }
+  ) => api.patch(API_ENDPOINTS.PRICE_WATCH_THRESHOLDS(id), { thresholds }),
+
+  delete: (id: string) => api.delete(API_ENDPOINTS.PRICE_WATCH_BY_ID(id)),
+
+  getAlerts: () => api.get(API_ENDPOINTS.PRICE_WATCH_ALERTS),
+
+  getSavings: () => api.get(API_ENDPOINTS.PRICE_WATCH_SAVINGS),
+};
