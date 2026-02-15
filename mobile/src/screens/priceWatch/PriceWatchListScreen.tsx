@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
+import { useFocusEffect } from '@react-navigation/native';
 import { priceWatchAPI } from '../../services/api';
 
 interface PriceWatch {
@@ -44,11 +45,7 @@ export default function PriceWatchListScreen({ navigation }: any) {
   const [price, setPrice] = useState('');
   const [storeName, setStoreName] = useState('');
 
-  useEffect(() => {
-    loadPriceWatches();
-  }, []);
-
-  const loadPriceWatches = async () => {
+  const loadPriceWatches = useCallback(async () => {
     try {
       const response = await priceWatchAPI.getList();
       setWatches(response.data.data);
@@ -58,7 +55,14 @@ export default function PriceWatchListScreen({ navigation }: any) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
+
+  // Reload price watches when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadPriceWatches();
+    }, [loadPriceWatches])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

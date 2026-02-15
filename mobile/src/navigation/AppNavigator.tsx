@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuthStore } from '../store/authStore';
 import { ActivityIndicator, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // Auth Screens
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -105,6 +106,8 @@ function MainNavigator() {
           paddingTop: 5,
           height: 60,
         },
+        tabBarActiveTintColor: '#4CAF50',
+        tabBarInactiveTintColor: '#999',
       }}
     >
       <Tab.Screen
@@ -113,6 +116,9 @@ function MainNavigator() {
         options={{
           tabBarLabel: 'Dashboard',
           headerTitle: 'SmartReceipt',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -122,6 +128,9 @@ function MainNavigator() {
           tabBarLabel: 'Receipts',
           headerTitle: 'My Receipts',
           headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="receipt" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -131,6 +140,9 @@ function MainNavigator() {
           tabBarLabel: 'Tracker',
           headerTitle: 'Price Tracker',
           headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="trending-up" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -139,6 +151,9 @@ function MainNavigator() {
         options={{
           tabBarLabel: 'Scan',
           headerTitle: 'Scan Receipt',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="camera" size={size} color={color} />
+          ),
         }}
       />
       <Tab.Screen
@@ -148,6 +163,9 @@ function MainNavigator() {
           tabBarLabel: 'Profile',
           headerTitle: 'Profile',
           headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person" size={size} color={color} />
+          ),
         }}
       />
     </Tab.Navigator>

@@ -32,14 +32,38 @@ export async function searchProductPrice(normalizedName: string): Promise<PriceR
   }
 
   // Strategy 3: Scrape Target (if request count < daily limit)
-  const requestCount = await getRequestCountToday('target');
-  if (requestCount < 50) {
+  const targetRequestCount = await getRequestCountToday('target');
+  if (targetRequestCount < 50) {
     try {
       const targetPrice = await scrapeTarget(normalizedName);
       if (targetPrice) results.push(targetPrice);
       await incrementRequestCount('target');
     } catch (error) {
       logger.error('Target scraping error:', error);
+    }
+  }
+
+  // Strategy 4: Best Buy API (if API key is configured)
+  const bestbuyRequestCount = await getRequestCountToday('bestbuy');
+  if (bestbuyRequestCount < 50 && process.env.BESTBUY_API_KEY) {
+    try {
+      const bestBuyPrice = await searchBestBuy(normalizedName);
+      if (bestBuyPrice) results.push(bestBuyPrice);
+      await incrementRequestCount('bestbuy');
+    } catch (error) {
+      logger.error('Best Buy API error:', error);
+    }
+  }
+
+  // Strategy 5: Scrape Costco (if request count < daily limit)
+  const costcoRequestCount = await getRequestCountToday('costco');
+  if (costcoRequestCount < 30) {
+    try {
+      const costcoPrice = await scrapeCostco(normalizedName);
+      if (costcoPrice) results.push(costcoPrice);
+      await incrementRequestCount('costco');
+    } catch (error) {
+      logger.error('Costco scraping error:', error);
     }
   }
 
@@ -235,6 +259,125 @@ async function incrementRequestCount(store: string): Promise<void> {
     await redisClient.expire(key, 24 * 60 * 60); // Expire after 24 hours
   } catch (error) {
     logger.error(`Error incrementing request count for ${store}:`, error);
+  }
+}
+
+/**
+ * Search Best Buy API for product prices
+ * Requires BESTBUY_API_KEY environment variable
+ * Get free API key at: https://developer.bestbuy.com/
+ */
+async function searchBestBuy(query: string): Promise<PriceResult | null> {
+  try {
+    const apiKey = process.env.BESTBUY_API_KEY;
+    if (!apiKey) {
+      logger.warn('Best Buy API key not configured');
+      return null;
+    }
+
+    // Best Buy Products API
+    const url = `https://api.bestbuy.com/v1/products((search=${encodeURIComponent(query)}))?apiKey=${apiKey}&sort=salePrice.asc&show=sku,name,salePrice,url,onlineAvailability&pageSize=1&format=json`;
+
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'SmartReceipt/1.0',
+      },
+    });
+
+    if (!response.ok) {
+      logger.warn(`Best Buy API returned ${response.status} for query: ${query}`);
+      return null;
+    }
+
+    const data: any = await response.json();
+
+    if (data.products && data.products.length > 0) {
+      const product = data.products[0];
+
+      if (product.salePrice) {
+        logger.info(`Found Best Buy price for "${query}": $${product.salePrice}`);
+
+        return {
+          store: 'Best Buy',
+          price: product.salePrice,
+          inStock: product.onlineAvailability === true,
+          url: product.url || `https://www.bestbuy.com/site/searchpage.jsp?st=${encodeURIComponent(query)}`,
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('Error searching Best Buy API:', error);
+    return null;
+  }
+}
+
+/**
+ * Scrape Costco.com for product prices
+ * Note: Costco requires membership to view prices, so this may have limited success
+ */
+async function scrapeCostco(query: string): Promise<PriceResult | null> {
+  try {
+    const searchUrl = `https://www.costco.com/CatalogSearch?keyword=${encodeURIComponent(query)}`;
+
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    });
+
+    if (!response.ok) {
+      logger.warn(`Costco returned ${response.status} for query: ${query}`);
+      return null;
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    // Costco's product structure (selectors may need updating)
+    const firstProduct = $('.product').first();
+
+    if (firstProduct.length === 0) {
+      logger.info(`No Costco products found for: ${query}`);
+      return null;
+    }
+
+    // Try multiple price selector patterns
+    let priceText = firstProduct.find('.price').first().text();
+    if (!priceText) {
+      priceText = firstProduct.find('[automation-id="productPriceOutput"]').text();
+    }
+    if (!priceText) {
+      priceText = firstProduct.find('.op-value').text();
+    }
+
+    const productLink = firstProduct.find('a').first().attr('href');
+
+    if (priceText) {
+      // Extract numeric price from text like "$4.99" or "$4 99"
+      const priceMatch = priceText.match(/\$?\s*(\d+)[\s.]?(\d{2})/);
+      if (priceMatch) {
+        const price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
+
+        logger.info(`Found Costco price for "${query}": $${price}`);
+
+        return {
+          store: 'Costco',
+          price,
+          inStock: true,
+          url: productLink ? `https://www.costco.com${productLink}` : searchUrl,
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('Error scraping Costco:', error);
+    return null;
   }
 }
 
