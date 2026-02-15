@@ -67,6 +67,18 @@ export async function searchProductPrice(normalizedName: string): Promise<PriceR
     }
   }
 
+  // Strategy 6: Scrape Safeway (if request count < daily limit)
+  const safewayRequestCount = await getRequestCountToday('safeway');
+  if (safewayRequestCount < 50) {
+    try {
+      const safewayPrice = await scrapeSafeway(normalizedName);
+      if (safewayPrice) results.push(safewayPrice);
+      await incrementRequestCount('safeway');
+    } catch (error) {
+      logger.error('Safeway scraping error:', error);
+    }
+  }
+
   return results;
 }
 
@@ -324,9 +336,17 @@ async function scrapeCostco(query: string): Promise<PriceResult | null> {
     const response = await fetch(searchUrl, {
       headers: {
         'User-Agent':
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        Connection: 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0',
+        Referer: 'https://www.costco.com/',
       },
     });
 
@@ -377,6 +397,96 @@ async function scrapeCostco(query: string): Promise<PriceResult | null> {
     return null;
   } catch (error) {
     logger.error('Error scraping Costco:', error);
+    return null;
+  }
+}
+
+/**
+ * Scrape Safeway.com for product prices
+ * Note: Safeway (Albertsons) uses club card pricing, so prices may vary
+ */
+async function scrapeSafeway(query: string): Promise<PriceResult | null> {
+  try {
+    const searchUrl = `https://www.safeway.com/shop/search-results.html?q=${encodeURIComponent(query)}`;
+
+    const response = await fetch(searchUrl, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'gzip, deflate, br',
+        Connection: 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Cache-Control': 'max-age=0',
+      },
+    });
+
+    if (!response.ok) {
+      logger.warn(`Safeway returned ${response.status} for query: ${query}`);
+      return null;
+    }
+
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    // Safeway's product structure (selectors may need updating)
+    // Try multiple selector patterns
+    let firstProduct = $('.product-item').first();
+    if (firstProduct.length === 0) {
+      firstProduct = $('[data-testid="product-card"]').first();
+    }
+    if (firstProduct.length === 0) {
+      firstProduct = $('.product-tile').first();
+    }
+
+    if (firstProduct.length === 0) {
+      logger.info(`No Safeway products found for: ${query}`);
+      return null;
+    }
+
+    // Try multiple price selector patterns
+    let priceText = firstProduct.find('.product-price').first().text();
+    if (!priceText) {
+      priceText = firstProduct.find('[data-testid="product-price"]').text();
+    }
+    if (!priceText) {
+      priceText = firstProduct.find('.price').text();
+    }
+    if (!priceText) {
+      priceText = firstProduct.find('.price-regular').text();
+    }
+
+    // Get product link
+    const productLink = firstProduct.find('a').first().attr('href');
+
+    if (priceText) {
+      // Extract numeric price from text like "$4.99" or "4.99"
+      const priceMatch = priceText.match(/\$?\s*(\d+)\.(\d{2})/);
+      if (priceMatch) {
+        const price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
+
+        logger.info(`Found Safeway price for "${query}": $${price}`);
+
+        return {
+          store: 'Safeway',
+          price,
+          inStock: true,
+          url: productLink
+            ? productLink.startsWith('http')
+              ? productLink
+              : `https://www.safeway.com${productLink}`
+            : searchUrl,
+        };
+      }
+    }
+
+    return null;
+  } catch (error) {
+    logger.error('Error scraping Safeway:', error);
     return null;
   }
 }

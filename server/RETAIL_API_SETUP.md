@@ -42,11 +42,38 @@ This document explains how to integrate with Costco and Best Buy for price compa
 - **Web Scraping**: May break if Costco changes their website structure
 - **Membership Required**: Some prices may require Costco membership to view
 - **Legal Considerations**: Web scraping is a gray area - use responsibly
+- ⚠️ **Currently Blocked**: Returns 403 Forbidden due to Cloudflare protection
 
 ### Limitations:
 - May not always find products
 - CSS selectors may need updating if Costco updates their site
 - Lower success rate compared to Best Buy API
+
+## Safeway Integration (Web Scraping)
+
+### How It Works:
+- Scrapes Safeway.com (Albertsons Companies) search results
+- Extracts prices from product listings
+- Limited to 50 requests per day to avoid rate limiting
+- Multiple CSS selector fallback patterns for reliability
+
+### Important Notes:
+- **No Official API**: Safeway doesn't provide a public API
+- **Web Scraping**: May break if Safeway changes their website structure
+- **Club Card Pricing**: Prices may vary based on club card membership
+- **Legal Considerations**: Web scraping is a gray area - use responsibly
+- ⚠️ **Currently Blocked**: Anti-bot protection may block requests
+
+### CSS Selectors Used:
+- Product cards: `.product-item`, `[data-testid="product-card"]`, `.product-tile`
+- Prices: `.product-price`, `[data-testid="product-price"]`, `.price`, `.price-regular`
+- Uses multiple fallback patterns to handle site updates
+
+### Limitations:
+- May not always find products
+- CSS selectors may need updating if Safeway updates their site
+- Lower success rate compared to Best Buy API
+- Anti-bot detection may require proxy services
 
 ## How Price Tracking Works
 
@@ -55,19 +82,21 @@ When a user enables price tracking for an item:
 1. **Daily Cron Job** runs at 2 AM (configured in `server/src/services/priceCheckCronService.ts`)
 
 2. **Price Search** queries multiple sources:
-   - Walmart (web scraping)
-   - Target (web scraping)
-   - **Best Buy (API)** ← New!
-   - **Costco (web scraping)** ← New!
-   - Open Food Facts (API)
+   - Walmart (web scraping) ⚠️ Currently blocked by anti-bot
+   - Target (web scraping) ⚠️ Currently blocked by anti-bot
+   - **Best Buy (API)** ✅ Official API - Recommended!
+   - **Costco (web scraping)** ⚠️ Blocked by Cloudflare (403)
+   - **Safeway (web scraping)** ⚠️ Currently blocked by anti-bot
+   - Open Food Facts (API) ℹ️ No price data
 
 3. **Best Price** is automatically saved and user is notified
 
 4. **Rate Limiting** prevents excessive requests:
-   - Walmart: Unlimited (for now)
-   - Target: 50/day
-   - Best Buy: 50/day
-   - Costco: 30/day
+   - Walmart: Unlimited (currently blocked)
+   - Target: 50/day (currently blocked)
+   - Best Buy: 50/day ✅ Working
+   - Costco: 30/day (blocked by Cloudflare)
+   - Safeway: 50/day (currently blocked)
 
 ## Testing
 
@@ -87,6 +116,49 @@ curl http://localhost:3000/api/v1/price-watch
 
 Check the logs for price scraping results.
 
+## Current Status: Web Scraping Challenges
+
+**⚠️ IMPORTANT**: As of February 2026, all major retailers (Walmart, Target, Costco, Safeway) have implemented sophisticated anti-bot protection that blocks direct web scraping attempts. When testing, you'll see "Robot or human?" challenge pages instead of actual product listings.
+
+### Why Web Scraping Is Currently Blocked:
+
+1. **Anti-Bot Detection**: Retailers use services like Cloudflare, PerimeterX, or DataDome to detect and block automated requests
+2. **Challenge Pages**: Instead of product pages, scrapers receive CAPTCHA or verification pages
+3. **Dynamic Content**: Many retailers load prices via JavaScript, which simple HTTP requests can't execute
+
+### Recommended Approach: Use Best Buy API
+
+✅ **Best Buy API is the only reliable option** because:
+- Official API with guaranteed uptime
+- No anti-bot protection
+- Real-time pricing and stock data
+- Free tier: 50,000 queries/day
+- Easy to set up (just register for API key)
+
+### Alternative Solutions for Web Scraping (Future):
+
+If you need to scrape other retailers, consider these approaches:
+
+1. **Browser Automation** (Puppeteer/Playwright)
+   - Runs a real browser to bypass anti-bot detection
+   - More resource-intensive
+   - Higher success rate
+
+2. **Proxy Services** (ScraperAPI, Bright Data)
+   - Paid services that handle anti-bot challenges
+   - ~$50-200/month
+   - Rotating residential IPs
+
+3. **Third-Party APIs** (Rainforest API, Oxylabs)
+   - Aggregate product data from multiple retailers
+   - ~$50-500/month depending on usage
+   - No scraping needed
+
+4. **Rate Limiting & Headers**
+   - Slow down requests to appear more human-like
+   - Rotate user agents
+   - Limited success with modern anti-bot systems
+
 ## Troubleshooting
 
 ### Best Buy API Not Working:
@@ -95,11 +167,11 @@ Check the logs for price scraping results.
 3. Check server logs for error messages
 4. Ensure you haven't exceeded rate limits
 
-### Costco Scraping Not Working:
-1. Check if Costco changed their website structure
-2. Update CSS selectors in `priceScraperService.ts`
-3. Try accessing https://www.costco.com directly to verify it's accessible
-4. Check rate limiting (30 requests per day)
+### Web Scraping Returns "Robot or human?" or 403:
+1. ✅ **Expected behavior** - Anti-bot protection is working
+2. Consider using Best Buy API instead
+3. For production, evaluate paid proxy/scraping services
+4. Browser automation (Puppeteer) may work but increases costs
 
 ## Future Enhancements
 
